@@ -1,7 +1,9 @@
 # WGAN-GP (TF2)
 
 ## Description
-Reimplementation of HitLuca (Luca Simonetto)'s Master's thesis project in Tensorflow 2.
+Reimplementation of HitLuca (Luca Simonetto)'s Master's thesis project in Tensorflow 2. (First described in https://esc.fnwi.uva.nl/thesis/centraal/files/f1376208007.pdf)
+
+Warning: I do not have access to a GPU server, and as such my only available method for testing is through Tensorflow. As such, I am unable to replicate the testing conditions from the original paper.
 
 Current progress:
 
