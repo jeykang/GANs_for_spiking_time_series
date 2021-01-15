@@ -50,6 +50,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         model_type = sys.argv[1]
     else:
-        model_type = 'vae'
+        model_type = input('Input model type ("handcrafted", "vae", "wgan", "wgan_gp", "wgan_gp_vae")')
     print(model_type)
     train(model_type)
