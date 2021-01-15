@@ -2,17 +2,16 @@ import json
 import os
 from datetime import datetime
 
-import tensorflow.keras.backend as K
+import keras
+import keras.backend as K
 import numpy as np
-from tensorflow.keras import initializers, regularizers, constraints
-from tensorflow.keras.layers import Layer, InputSpec
+from keras import initializers, regularizers, constraints
+from keras.engine import Layer, InputSpec
 # import matplotlib
 # matplotlib.use('Agg')
-#from keras.legacy import interfaces
+from keras.legacy import interfaces
 from matplotlib import pyplot as plt
 from scipy.misc import imresize
-
-import tensorflow as tf
 
 
 def set_model_trainable(model, trainable):
@@ -145,7 +144,7 @@ def load_splitted_dataset(split=0.3, timesteps=90,
 def load_resized_mnist(split=0.3, timesteps=100):
     side = int(np.sqrt(timesteps))
 
-    from tf.keras.datasets import mnist
+    from keras.datasets import mnist
     (x_train, y_train), _ = mnist.load_data()
     dataset = np.empty((60000, side, side))
     for row in range(x_train.shape[0]):
@@ -264,7 +263,7 @@ class MinibatchDiscrimination(Layer):
         assert len(input_shape) == 2
 
         input_dim = input_shape[1]
-        self.input_spec = [InputSpec(dtype=tf.keras.backend.floatx(),
+        self.input_spec = [InputSpec(dtype=K.floatx(),
                                      shape=(None, input_dim))]
 
         self.W = self.add_weight(shape=(self.nb_kernels, input_dim, self.kernel_dim),
@@ -275,7 +274,7 @@ class MinibatchDiscrimination(Layer):
                                  constraint=self.W_constraint)
 
         self.b = self.add_weight(shape=(self.nb_kernels,),
-                                 initializer=tf.keras.initializers.zeros(),
+                                 initializer=keras.initializers.zeros(),
                                  name='kernel',
                                  regularizer=self.W_regularizer,
                                  trainable=True,
@@ -284,12 +283,12 @@ class MinibatchDiscrimination(Layer):
         super(MinibatchDiscrimination, self).build(input_shape)
 
     def call(self, x, mask=None):
-        activation = tf.reshape(tf.tensordot(x, self.W), (-1, self.nb_kernels, self.kernel_dim))
-        diffs = tf.expand_dims(activation, 3) - tf.expand_dims(tf.transpose(activation, [1, 2, 0]), 0)
-        abs_diffs = tf.math.reduce_sum(tf.math.abs(diffs), axis=2)
-        minibatch_features = tf.math.reduce_sum(tf.math.exp(-abs_diffs), axis=2)
+        activation = K.reshape(K.dot(x, self.W), (-1, self.nb_kernels, self.kernel_dim))
+        diffs = K.expand_dims(activation, 3) - K.expand_dims(K.permute_dimensions(activation, [1, 2, 0]), 0)
+        abs_diffs = K.sum(K.abs(diffs), axis=2)
+        minibatch_features = K.sum(K.exp(-abs_diffs), axis=2)
         minibatch_features += self.b
-        return tf.concat([x, minibatch_features], 1)
+        return K.concatenate([x, minibatch_features], 1)
 
     def compute_output_shape(self, input_shape):
         assert input_shape and len(input_shape) == 2
@@ -344,7 +343,7 @@ class BatchNormalization(Layer):
         - [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
     """
 
-    #@interfaces.legacy_batchnorm_support
+    @interfaces.legacy_batchnorm_support
     def __init__(self,
                  axis=-1,
                  momentum=0.99,
