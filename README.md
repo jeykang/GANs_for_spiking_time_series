@@ -11,7 +11,7 @@ Reimplement models in TF2:
  - VAE: TODO
   
 Reimplement helper code in TF2/updated libraries:
- - utils: TODO
+ - utils: IN PROGRESS
 
 ## Project structure
 
