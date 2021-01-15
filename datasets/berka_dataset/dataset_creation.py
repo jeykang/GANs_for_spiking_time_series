@@ -15,7 +15,7 @@ TOTAL_DAYS = 2190
 def parse_dataset():
     for filename in os.listdir('original'):
         logger.debug(filename)
-        with open('original/' + filename, 'r') as input_file, open('parsed/' + filename.split('.')[0] + '.csv',
+        with open('original/' + filename, 'r', encoding="latin-1") as input_file, open('parsed/' + filename.split('.')[0] + '.csv',
                                                                    'w') as output_file:
             for line in input_file.readlines():
                 print(line.replace('"', '').replace('\n', '').replace(';', ', ').replace(' ', ''), file=output_file)
