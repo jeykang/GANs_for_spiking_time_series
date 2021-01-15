@@ -2,14 +2,13 @@ import json
 import os
 from datetime import datetime
 
-import keras
-import keras.backend as K
+import tf.keras.backend as K
 import numpy as np
 from tf.keras import initializers, regularizers, constraints
 from tensorflow.keras.layers import Layer, InputSpec
 # import matplotlib
 # matplotlib.use('Agg')
-from keras.legacy import interfaces
+#from keras.legacy import interfaces
 from matplotlib import pyplot as plt
 from scipy.misc import imresize
 
@@ -345,7 +344,7 @@ class BatchNormalization(Layer):
         - [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
     """
 
-    @interfaces.legacy_batchnorm_support
+    #@interfaces.legacy_batchnorm_support
     def __init__(self,
                  axis=-1,
                  momentum=0.99,
