@@ -1,7 +1,7 @@
 import os
 import pickle
 
-from tensorflow.keras.layers import *
+from keras.layers import *
 
 from generative_models import utils
 from generative_models.wgan_gp import wgan_gp_utils
