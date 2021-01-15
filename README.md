@@ -5,12 +5,12 @@ Reimplementation of HitLuca (Luca Simonetto)'s Master's thesis project in Tensor
 
 Current progress:
 
-Reimplement models in TF2
+Reimplement models in TF2:
  - WGAN: TODO
  - WGAN-GP: DONE
  - VAE: TODO
   
-Reimplement helper code in TF2/updated libraries
+Reimplement helper code in TF2/updated libraries:
  - utils: TODO
 
 ## Project structure
