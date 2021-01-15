@@ -104,87 +104,76 @@ def build_critic(timesteps, use_mbd, use_packing, packing_degree):
 
 def build_generator_model(generator, critic, latent_dim, timesteps, use_packing, packing_degree, batch_size,
                           generator_lr):
-    utils.set_model_trainable(generator, True)
-    utils.set_model_trainable(critic, False)
+    generator.trainable = True
+    critic.trainable = False
 
-    noise_samples = Input((latent_dim,))
+    noise_samples = tf.keras.layers.Input((latent_dim,))
     generated_samples = generator(noise_samples)
 
     if use_packing:
-        generated_samples = Lambda(lambda x: K.reshape(x, (batch_size, timesteps, 1)))(generated_samples)
-        supporting_noise_samples = Input((latent_dim, packing_degree))
-
-        reshaped_supporting_noise_samples = Lambda(
-            lambda x: K.reshape(x, (batch_size * packing_degree, latent_dim)))(
-            supporting_noise_samples)
+        generated_samples = tf.reshape(generated_samples, (batch_size, timesteps, 1))
+        supporting_noise_samples = tf.keras.layers.Input((latent_dim, packing_degree))
+        
+        reshaped_supporting_noise_samples = tf.reshape(supporting_noise_samples, (batch_size * packing_degree, latent_dim))
 
         supporting_generated_samples = generator(reshaped_supporting_noise_samples)
-        supporting_generated_samples = Lambda(
-            lambda x: K.reshape(x, (batch_size, timesteps, packing_degree)))(
-            supporting_generated_samples)
-        merged_generated_samples = Concatenate(-1)([generated_samples, supporting_generated_samples])
+        
+        supporting_generated_samples = tf.reshape(supporting_generated_samples, (batch_size, timesteps, packing_degree))
+        
+        merged_generated_samples = tf.keras.layers.Concatenate(axis=-1)([generated_samples, supporting_generated_samples])
 
         generated_criticized = critic(merged_generated_samples)
 
-        generator_model = Model([noise_samples, supporting_noise_samples], generated_criticized, 'generator_model')
-        generator_model.compile(optimizer=Adam(generator_lr, beta_1=0, beta_2=0.9), loss=utils.wasserstein_loss)
+        generator_model = tf.keras.Model([noise_samples, supporting_noise_samples], generated_criticized, name='generator_model')
+        generator_model.compile(optimizer=tf.keras.optimizers.Adam(generator_lr, beta_1=0, beta_2=0.9), loss=utils.wasserstein_loss)
     else:
         generated_criticized = critic(generated_samples)
 
-        generator_model = Model([noise_samples], generated_criticized, 'generator_model')
-        generator_model.compile(optimizer=Adam(generator_lr, beta_1=0, beta_2=0.9), loss=utils.wasserstein_loss)
+        generator_model = tf.keras.Model([noise_samples], generated_criticized, name='generator_model')
+        generator_model.compile(optimizer=tf.keras.optimizers.Adam(generator_lr, beta_1=0, beta_2=0.9), loss=utils.wasserstein_loss)
     return generator_model
 
 
 def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, packing_degree, batch_size, critic_lr,
                        gradient_penality_weight):
-    utils.set_model_trainable(generator, False)
-    utils.set_model_trainable(critic, True)
+    generator.trainable = False
+    critic.trainable = True
 
-    noise_samples = Input((latent_dim,))
-    real_samples = Input((timesteps,))
+    noise_samples = tf.keras.layers.Input((latent_dim,))
+    real_samples = tf.keras.layers.Input((timesteps,))
 
     if use_packing:
-        supporting_noise_samples = Input((latent_dim, packing_degree))
-        supporting_real_samples = Input((timesteps, packing_degree))
+        supporting_noise_samples = tf.keras.layers.Input((latent_dim, packing_degree))
+        supporting_real_samples = tf.keras.layers.Input((timesteps, packing_degree))
 
-        reshaped_supporting_noise_samples = Lambda(
-            lambda x: K.reshape(x, (batch_size * packing_degree, latent_dim)))(
-            supporting_noise_samples)
+        reshaped_supporting_noise_samples = tf.reshape(supporting_noise_samples, (batch_size * packing_degree, latent_dim))
+        
         generated_samples = generator(noise_samples)
         supporting_generated_samples = generator(reshaped_supporting_noise_samples)
+        
+        expanded_generated_samples = tf.reshape(generated_samples, (batch_size, timesteps, 1))
+        expanded_generated_supporting_samples = tf.reshape(supporting_generated_samples, (batch_size, timesteps, packing_degree))
 
-        expanded_generated_samples = Lambda(lambda x: K.reshape(x, (batch_size, timesteps, 1)))(
-            generated_samples)
-        expanded_generated_supporting_samples = Lambda(
-            lambda x: K.reshape(x, (batch_size, timesteps, packing_degree)))(
-            supporting_generated_samples)
-
-        merged_generated_samples = Concatenate(-1)([expanded_generated_samples, expanded_generated_supporting_samples])
+        merged_generated_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_generated_samples, expanded_generated_supporting_samples])
 
         generated_criticized = critic(merged_generated_samples)
-
-        expanded_real_samples = Lambda(lambda x: K.reshape(x, (batch_size, timesteps, 1)))(real_samples)
-        merged_real_samples = Lambda(lambda x: K.concatenate(x, -1))([expanded_real_samples, supporting_real_samples])
+        
+        expanded_real_samples = tf.reshape(real_samples, (batch_size, timesteps, 1))
+        merged_real_samples = tf.concat([expanded_real_samples, supporting_real_samples], -1)
 
         real_criticized = critic(merged_real_samples)
 
         averaged_samples = RandomWeightedAverage(batch_size)([real_samples, generated_samples])
-
-        expanded_averaged_samples = Lambda(lambda x: K.reshape(x, (batch_size, timesteps, 1)))(
-            averaged_samples)
-
-        expanded_supporting_real_samples = Lambda(
-            lambda x: K.reshape(x, ((batch_size * packing_degree), timesteps)))(
-            supporting_real_samples)
+        
+        expanded_averaged_samples = tf.reshape(averaged_samples, (batch_size, timesteps, 1))
+        
+        expanded_supporting_real_samples = tf.reshape(supporting_real_samples, (batch_size * packing_degree, timesteps))
         averaged_support_samples = RandomWeightedAverage((batch_size * packing_degree))(
             [expanded_supporting_real_samples, supporting_generated_samples])
+        
+        averaged_support_samples = tf.reshape(averaged_support_samples, (batch_size, timesteps, packing_degree))
 
-        averaged_support_samples = Lambda(
-            lambda x: K.reshape(x, (batch_size, timesteps, packing_degree)))(
-            averaged_support_samples)
-
-        merged_averaged_samples = Concatenate(-1)([expanded_averaged_samples, averaged_support_samples])
+        merged_averaged_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_averaged_samples, averaged_support_samples])
 
         averaged_criticized = critic(merged_averaged_samples)
 
@@ -193,10 +182,10 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
                                   gradient_penalty_weight=gradient_penality_weight)
         partial_gp_loss.__name__ = 'gradient_penalty'
 
-        critic_model = Model([real_samples, noise_samples, supporting_real_samples, supporting_noise_samples],
-                             [real_criticized, generated_criticized, averaged_criticized], 'critic_model')
+        critic_model = tf.keras.Model([real_samples, noise_samples, supporting_real_samples, supporting_noise_samples],
+                             [real_criticized, generated_criticized, averaged_criticized], name='critic_model')
 
-        critic_model.compile(optimizer=Adam(critic_lr, beta_1=0, beta_2=0.9),
+        critic_model.compile(optimizer=tf.keras.optimizers.Adam(critic_lr, beta_1=0, beta_2=0.9),
                              loss=[utils.wasserstein_loss, utils.wasserstein_loss, partial_gp_loss],
                              loss_weights=[1 / 3, 1 / 3, 1 / 3])
     else:
