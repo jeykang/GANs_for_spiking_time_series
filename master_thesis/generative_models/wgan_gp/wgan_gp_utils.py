@@ -13,28 +13,28 @@ def build_generator(latent_dim, timesteps):
     generated = generator_inputs
 
     generated = Dense(15)(generated)
-    generated = utils.BatchNormalization()(generated)
+    #generated = utils.BatchNormalization()(generated)
     generated = LeakyReLU(0.2)(generated)
 
     generated = Lambda(lambda x: K.expand_dims(x))(generated)
 
     generated = Conv1D(32, 3, padding='same')(generated)
-    generated = utils.BatchNormalization()(generated)
+    #generated = utils.BatchNormalization()(generated)
     generated = LeakyReLU(0.2)(generated)
     generated = UpSampling1D(2)(generated)
 
     generated = Conv1D(32, 3, padding='same')(generated)
-    generated = utils.BatchNormalization()(generated)
+    #generated = utils.BatchNormalization()(generated)
     generated = LeakyReLU(0.2)(generated)
     generated = UpSampling1D(2)(generated)
 
     generated = Conv1D(32, 3, padding='same')(generated)
-    generated = utils.BatchNormalization()(generated)
+    #generated = utils.BatchNormalization()(generated)
     generated = LeakyReLU(0.2)(generated)
     generated = UpSampling1D(2)(generated)
 
     generated = Conv1D(1, 3, padding='same')(generated)
-    generated = utils.BatchNormalization()(generated)
+    #generated = utils.BatchNormalization()(generated)
     generated = LeakyReLU(0.2)(generated)
 
     generated = Lambda(lambda x: K.squeeze(x, -1))(generated)
