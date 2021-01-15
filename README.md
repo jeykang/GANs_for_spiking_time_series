@@ -35,6 +35,13 @@ Before starting, run the ```setup.py``` script, that will automatically download
 ### Prerequisites
 To install the python environment for this project, refer to the [Pipenv setup guide](https://pipenv.readthedocs.io/en/latest/basics/)
 
+Currently identified requirements:
+
+ - matplotlib
+ - scipy==0.10.0
+ - tensorflow
+ - 
+
 ### Training the models
 As the Java server is now integrated in the project, there is no need to start it separately.
 
