@@ -9,7 +9,7 @@ Current progress:
 
 Reimplement models in TF2:
  - WGAN: TODO
- - WGAN-GP: DONE
+ - WGAN-GP: DONE?
  - VAE: TODO
   
 Reimplement helper code in TF2/updated libraries:
