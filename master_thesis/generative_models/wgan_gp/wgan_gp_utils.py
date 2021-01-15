@@ -6,79 +6,98 @@ from keras.layers.merge import _Merge
 from keras.optimizers import Adam
 
 from generative_models import utils
+import tensorflow as tf
 
+"""
+1. Implement Wasserstein loss
+"""
+class Wasserstein(tf.keras.losses.Loss):
+
+  def call(self, y_true, y_pred):
+    y_pred = tf.convert_to_tensor_v2(y_pred)
+    y_true = tf.cast(y_true, y_pred.dtype)
+    return tf.math.reduce_mean(y_true * y_pred, axis=-1)
+
+"""
+2. Implement conv block
+
+Conv1D
+Activation(LeakyReLU)
+MaxPooling1D
+"""
+
+def ConvBlock(x):
+  c = tf.keras.layers.Conv1D(32, 3, padding="same")(x)
+  a = tf.keras.layers.LeakyReLU(alpha=0.2)(c)
+  m = tf.keras.layers.MaxPooling1D(pool_size=2)(a)
+  return m
+
+"""
+3. Implement deconv block
+
+Conv1D
+(Batchnorm)
+Activation(LeakyReLU)
+UpSampling1D
+"""
+
+def DeConvBlock(x):
+  c = tf.keras.layers.Conv1D(32, 3, padding="same")(x)
+  b = tf.keras.layers.BatchNormalization()(c)
+  a = tf.keras.layers.LeakyReLU(alpha=0.2)(b)
+  u = tf.keras.layers.UpSampling1D(size=2)(a)
+  return u
 
 def build_generator(latent_dim, timesteps):
-    generator_inputs = Input((latent_dim,))
-    generated = generator_inputs
+    
+    gen_input = tf.keras.layers.Input((latent_dim,))
+    gdense0 = tf.keras.layers.Dense(15)(gen_input)
+    bnorm0 = tf.keras.layers.BatchNormalization()(gdense0)
+    gactivation0 = tf.keras.layers.LeakyReLU(alpha=0.2)(bnorm0)
 
-    generated = Dense(15)(generated)
-    generated = utils.BatchNormalization()(generated)
-    generated = LeakyReLU(0.2)(generated)
+    #expand dims before entry into deconv block- something the original paper failed to mention
+    gactivation0 = tf.expand_dims(gactivation0, axis=2)
 
-    generated = Lambda(lambda x: K.expand_dims(x))(generated)
+    deconv0 = DeConvBlock(gactivation0)
+    deconv1 = DeConvBlock(deconv0)
+    deconv2 = DeConvBlock(deconv1)
+    gconv0 = tf.keras.layers.Conv1D(1, 3, padding="same")(deconv2)
+    bnorm1 = tf.keras.layers.BatchNormalization()(gconv0)
+    gactivation1 = tf.keras.layers.LeakyReLU(alpha=0.2)(bnorm1)
 
-    generated = Conv1D(32, 3, padding='same')(generated)
-    generated = utils.BatchNormalization()(generated)
-    generated = LeakyReLU(0.2)(generated)
-    generated = UpSampling1D(2)(generated)
+    #squeeze previously expanded dim now that it's not needed anymore
+    gactivation1 = tf.squeeze(gactivation1, axis=-1)
 
-    generated = Conv1D(32, 3, padding='same')(generated)
-    generated = utils.BatchNormalization()(generated)
-    generated = LeakyReLU(0.2)(generated)
-    generated = UpSampling1D(2)(generated)
+    gdense1 = tf.keras.layers.Dense(timesteps)(gactivation1)
+    activation2 = tf.keras.layers.Activation("tanh")(gdense1)
 
-    generated = Conv1D(32, 3, padding='same')(generated)
-    generated = utils.BatchNormalization()(generated)
-    generated = LeakyReLU(0.2)(generated)
-    generated = UpSampling1D(2)(generated)
-
-    generated = Conv1D(1, 3, padding='same')(generated)
-    generated = utils.BatchNormalization()(generated)
-    generated = LeakyReLU(0.2)(generated)
-
-    generated = Lambda(lambda x: K.squeeze(x, -1))(generated)
-
-    generated = Dense(timesteps, activation='tanh')(generated)
-
-    generator = Model(generator_inputs, generated, 'generator')
+    generator = tf.keras.Model(gen_input, activation2, 'generator')
     return generator
 
 
 def build_critic(timesteps, use_mbd, use_packing, packing_degree):
     if use_packing:
-        critic_inputs = Input((timesteps, packing_degree + 1))
-        criticized = critic_inputs
+        critic_input = tf.keras.layers.Input((timesteps, packing_degree + 1))
     else:
-        critic_inputs = Input((timesteps,))
-        criticized = Lambda(lambda x: K.expand_dims(x, -1))(critic_inputs)
-
-    criticized = Conv1D(32, 3, padding='same')(criticized)
-    criticized = LeakyReLU(0.2)(criticized)
-    criticized = MaxPooling1D(2, padding='same')(criticized)
-
-    criticized = Conv1D(32, 3, padding='same')(criticized)
-    criticized = LeakyReLU(0.2)(criticized)
-    criticized = MaxPooling1D(2, padding='same')(criticized)
-
-    criticized = Conv1D(32, 3, padding='same')(criticized)
-    criticized = LeakyReLU(0.2)(criticized)
-    criticized = MaxPooling1D(2, padding='same')(criticized)
-
-    criticized = Conv1D(32, 3, padding='same')(criticized)
-    criticized = LeakyReLU(0.2)(criticized)
-
-    criticized = Flatten()(criticized)
+        critic_input = tf.expand_dims(tf.keras.layers.Input((timesteps,)), axis=-1)
+        critic_input = Lambda(lambda x: K.expand_dims(x, -1))(critic_inputs)
+    
+    conv0 = ConvBlock(critic_input)
+    conv1 = ConvBlock(conv0)
+    conv2 = ConvBlock(conv1)
+    cactivation0 = tf.keras.layers.LeakyReLU(alpha=0.2)(conv2)
+    flatten0 = tf.keras.layers.Flatten()(cactivation0)
+    
     if use_mbd:
-        criticized = utils.MinibatchDiscrimination(15, 3)(criticized)
+        flatten0 = utils.MinibatchDiscrimination(15, 3)(flatten0)
+    
+    cdense0 = tf.keras.layers.Dense(50)(flatten0)
+    cactivation1 = tf.keras.layers.LeakyReLU(alpha=0.2)(cdense0)
+    cdense1 = tf.keras.layers.Dense(15)(cactivation1)
+    cactivation2 = tf.keras.layers.LeakyReLU(alpha=0.2)(cdense1)
+    cdense2 = tf.keras.layers.Dense(1)(cactivation2)
 
-    criticized = Dense(50)(criticized)
-    criticized = LeakyReLU(0.2)(criticized)
-    criticized = Dense(15)(criticized)
-    criticized = LeakyReLU(0.2)(criticized)
-    criticized = Dense(1)(criticized)
-
-    critic = Model(critic_inputs, criticized, 'critic')
+    critic = tf.keras.Model(critic_input, cdense2, 'critic')
 
     return critic
 
