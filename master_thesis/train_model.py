@@ -1,18 +1,18 @@
 import sys
 
 from generative_models import utils
-#from generative_models.handcrafted.handcrafted_generation import HandcraftedGeneration
-#from generative_models.vae.vae_model import VAE
-#from generative_models.wgan.wgan_model import WGAN
+from generative_models.handcrafted.handcrafted_generation import HandcraftedGeneration
+from generative_models.vae.vae_model import VAE
+from generative_models.wgan.wgan_model import WGAN
 from generative_models.wgan_gp.wgan_gp_model import WGAN_GP
-#from generative_models.wgan_gp_vae.wgan_gp_vae_model import WGAN_GP_VAE
+from generative_models.wgan_gp_vae.wgan_gp_vae_model import WGAN_GP_VAE
 
 models_dictionary = {
-    #'handcrafted': HandcraftedGeneration,
-    #'vae': VAE,
-    #'wgan': WGAN,
-    'wgan_gp': WGAN_GP
-    #'wgan_gp_vae': WGAN_GP_VAE
+    'handcrafted': HandcraftedGeneration,
+    'vae': VAE,
+    'wgan': WGAN,
+    'wgan_gp': WGAN_GP,
+    'wgan_gp_vae': WGAN_GP_VAE
 }
 
 
@@ -50,6 +50,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         model_type = sys.argv[1]
     else:
-        model_type = input('Input model type ("handcrafted", "vae", "wgan", "wgan_gp", "wgan_gp_vae"); only wgan_gp is supported as of now')
+        model_type = 'vae'
     print(model_type)
     train(model_type)
