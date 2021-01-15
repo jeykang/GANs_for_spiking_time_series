@@ -1,10 +1,4 @@
 from functools import partial
-
-from keras import Model
-from keras.layers import *
-from keras.layers.merge import _Merge
-from keras.optimizers import Adam
-
 from generative_models import utils
 import tensorflow as tf
 
@@ -211,20 +205,20 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
 
 
 def gradient_penalty_loss(_, y_pred, averaged_samples, gradient_penalty_weight):
-    gradients = K.gradients(y_pred, averaged_samples)[0]
-    gradients_sqr = K.square(gradients)
-    gradients_sqr_sum = K.sum(gradients_sqr, axis=np.arange(1, len(gradients_sqr.shape)))
-    gradient_l2_norm = K.sqrt(gradients_sqr_sum)
-    gradient_penalty = gradient_penalty_weight * K.square(1 - gradient_l2_norm)
-    return K.mean(gradient_penalty)
+    gradients = tf.gradients(y_pred, averaged_samples)[0]
+    gradients_sqr = tf.math.square(gradients)
+    gradients_sqr_sum = tf.math.reduce_sum(gradients_sqr, axis=np.arange(1, len(gradients_sqr.shape)))
+    gradient_l2_norm = tf.math.sqrt(gradients_sqr_sum)
+    gradient_penalty = gradient_penalty_weight * tf.math.square(1 - gradient_l2_norm)
+    return tf.math.reduce_mean(gradient_penalty)
 
 
-class RandomWeightedAverage(_Merge):
+class RandomWeightedAverage(tf.keras.layers.Layer):
     def __init__(self, batch_size, **kwargs):
         super().__init__(**kwargs)
         self._batch_size = batch_size
 
     def _merge_function(self, inputs):
-        weights = K.random_uniform((self._batch_size, 1))
+        weights = tf.random.uniform((self._batch_size, 1))
         averaged_inputs = (weights * inputs[0]) + ((1 - weights) * inputs[1])
         return averaged_inputs
