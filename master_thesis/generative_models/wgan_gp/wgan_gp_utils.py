@@ -74,7 +74,6 @@ def build_critic(timesteps, use_mbd, use_packing, packing_degree):
         critic_input = tf.keras.layers.Input((timesteps, packing_degree + 1))
     else:
         critic_input = tf.expand_dims(tf.keras.layers.Input((timesteps,)), axis=-1)
-        critic_input = Lambda(lambda x: K.expand_dims(x, -1))(critic_inputs)
     
     conv0 = ConvBlock(critic_input)
     conv1 = ConvBlock(conv0)
