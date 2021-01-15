@@ -38,7 +38,7 @@ To install the python environment for this project, refer to the [Pipenv setup g
 Currently identified requirements:
 
  - matplotlib
- - scipy==0.10.0
+ - scipy==1.1.0
  - tensorflow
  - 
 
