@@ -2,9 +2,9 @@ import json
 import os
 from datetime import datetime
 
-import tf.keras.backend as K
+import tensorflow.keras.backend as K
 import numpy as np
-from tf.keras import initializers, regularizers, constraints
+from tensorflow.keras import initializers, regularizers, constraints
 from tensorflow.keras.layers import Layer, InputSpec
 # import matplotlib
 # matplotlib.use('Agg')
