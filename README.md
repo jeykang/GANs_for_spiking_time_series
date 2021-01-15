@@ -1,9 +1,7 @@
-# Generating spiking time series with Generative Adversarial Networks: an application on banking transactions
+# WGAN-GP (TF2)
 
 ## Description
-Master thesis project for my Master in Artificial Intelligence at UvA (University of Amsterdam).
-
-This project aims at generating spiking time series patterns using Generative Adversarial Networks, and compare the results against own baselines.
+Reimplementation of HitLuca (Luca Simonetto)'s Master's thesis project in Tensorflow 2.
 
 ## Project structure
 
