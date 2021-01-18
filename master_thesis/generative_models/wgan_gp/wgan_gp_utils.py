@@ -208,6 +208,8 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
 
 
 def gradient_penalty_loss(_, y_pred, averaged_samples, gradient_penalty_weight):
+    print("y_pred:", y_pred)
+    print("averaged_samples:", averaged_samples)
     gradients = tf.gradients(y_pred, averaged_samples)[0]
     gradients_sqr = tf.math.square(gradients)
     gradients_sqr_sum = tf.math.reduce_sum(gradients_sqr, axis=np.arange(1, len(gradients_sqr.shape)))
