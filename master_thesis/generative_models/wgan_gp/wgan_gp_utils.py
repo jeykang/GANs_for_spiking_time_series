@@ -71,9 +71,11 @@ def build_generator(latent_dim, timesteps):
 
 def build_critic(timesteps, use_mbd, use_packing, packing_degree):
     if use_packing:
-        critic_input = tf.keras.layers.Input((timesteps, packing_degree + 1))
+        input_temp = tf.keras.layers.Input((timesteps, packing_degree + 1))
+        critic_input = input_temp
     else:
-        critic_input = tf.expand_dims(tf.keras.layers.Input((timesteps,)), axis=-1)
+        input_temp = tf.keras.layers.Input((timesteps,))
+        critic_input = tf.expand_dims(input_temp, axis=-1)
     
     conv0 = ConvBlock(critic_input)
     conv1 = ConvBlock(conv0)
@@ -90,7 +92,7 @@ def build_critic(timesteps, use_mbd, use_packing, packing_degree):
     cactivation2 = tf.keras.layers.LeakyReLU(alpha=0.2)(cdense1)
     cdense2 = tf.keras.layers.Dense(1)(cactivation2)
 
-    critic = tf.keras.Model(critic_input, cdense2, name='critic')
+    critic = tf.keras.Model(input_temp, cdense2, name='critic')
 
     return critic
 
