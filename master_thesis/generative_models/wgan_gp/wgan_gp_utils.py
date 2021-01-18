@@ -197,7 +197,7 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
         partial_gp_loss.__name__ = 'gradient_penalty'
 
         critic_model = tf.keras.Model([real_samples, noise_samples],
-                             [real_criticized, generated_criticized, averaged_criticized], 'critic_model')
+                             [real_criticized, generated_criticized, averaged_criticized], name='critic_model')
 
         critic_model.compile(optimizer=tf.keras.optimizers.Adam(critic_lr, beta_1=0, beta_2=0.9),
                              loss=[utils.wasserstein_loss, utils.wasserstein_loss, partial_gp_loss],
