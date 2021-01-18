@@ -116,6 +116,8 @@ def build_generator_model(generator, critic, latent_dim, timesteps, use_packing,
         supporting_generated_samples = tf.reshape(supporting_generated_samples, (batch_size, timesteps, packing_degree))
         
         merged_generated_samples = tf.keras.layers.Concatenate(axis=-1)([generated_samples, supporting_generated_samples])
+        
+        print("Concat1")
 
         generated_criticized = critic(merged_generated_samples)
 
@@ -151,11 +153,15 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
 
         merged_generated_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_generated_samples, expanded_generated_supporting_samples])
 
+        print("Concat2")
+        
         generated_criticized = critic(merged_generated_samples)
         
         expanded_real_samples = tf.reshape(real_samples, (batch_size, timesteps, 1))
         merged_real_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_real_samples, supporting_real_samples])
 
+        print("Concat3")
+        
         real_criticized = critic(merged_real_samples)
 
         averaged_samples = RandomWeightedAverage(batch_size)([real_samples, generated_samples])
@@ -170,6 +176,8 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
 
         merged_averaged_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_averaged_samples, averaged_support_samples])
 
+        print("Concat4")
+        
         averaged_criticized = critic(merged_averaged_samples)
 
         partial_gp_loss = partial(gradient_penalty_loss,
