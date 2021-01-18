@@ -65,7 +65,7 @@ def build_generator(latent_dim, timesteps):
     gdense1 = tf.keras.layers.Dense(timesteps)(gactivation1)
     activation2 = tf.keras.layers.Activation("tanh")(gdense1)
 
-    generator = tf.keras.Model(gen_input, activation2, 'generator')
+    generator = tf.keras.Model(gen_input, activation2, name='generator')
     return generator
 
 
@@ -90,7 +90,7 @@ def build_critic(timesteps, use_mbd, use_packing, packing_degree):
     cactivation2 = tf.keras.layers.LeakyReLU(alpha=0.2)(cdense1)
     cdense2 = tf.keras.layers.Dense(1)(cactivation2)
 
-    critic = tf.keras.Model(critic_input, cdense2, 'critic')
+    critic = tf.keras.Model(critic_input, cdense2, name='critic')
 
     return critic
 
