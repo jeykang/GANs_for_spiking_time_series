@@ -171,11 +171,20 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
 
         merged_averaged_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_averaged_samples, averaged_support_samples])
         
-        averaged_criticized = critic(merged_averaged_samples)
-
+        with tf.GradientTape() as t:
+          t.watch(merged_averaged_samples)
+          averaged_criticized = critic(merged_averaged_samples)
+        """
         partial_gp_loss = partial(gradient_penalty_loss,
                                   averaged_samples=merged_averaged_samples,
                                   gradient_penalty_weight=gradient_penality_weight)
+        """
+        
+        partial_gp_loss = partial(gradient_penalty_loss,
+                                  averaged_samples=merged_averaged_samples,
+                                  gradient_penalty_weight=gradient_penality_weight,
+                                  gradient_tape = t)
+        
         partial_gp_loss.__name__ = 'gradient_penalty'
 
         critic_model = tf.keras.Model([real_samples, noise_samples, supporting_real_samples, supporting_noise_samples],
@@ -190,11 +199,19 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
         real_criticized = critic(real_samples)
 
         averaged_samples = RandomWeightedAverage(batch_size)([real_samples, generated_samples])
-        averaged_criticized = critic(averaged_samples)
-
+        with tf.GradientTape() as t:
+          t.watch(averaged_samples)
+          averaged_criticized = critic(averaged_samples)
+        """
         partial_gp_loss = partial(gradient_penalty_loss,
                                   averaged_samples=averaged_samples,
                                   gradient_penalty_weight=gradient_penality_weight)
+        """
+        
+        partial_gp_loss = partial(gradient_penalty_loss,
+                                  averaged_samples=averaged_samples,
+                                  gradient_penalty_weight=gradient_penality_weight,
+                                  gradient_tape = t)
         partial_gp_loss.__name__ = 'gradient_penalty'
 
         critic_model = tf.keras.Model([real_samples, noise_samples],
@@ -207,10 +224,11 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
     return critic_model
 
 
-def gradient_penalty_loss(_, y_pred, averaged_samples, gradient_penalty_weight):
+def gradient_penalty_loss(_, y_pred, averaged_samples, gradient_penalty_weight, gradient_tape):
     print("y_pred:", y_pred)
     print("averaged_samples:", averaged_samples)
-    gradients = tf.gradients(y_pred, averaged_samples)[0]
+    #gradients = tf.gradients(y_pred, averaged_samples)[0]
+    gradients = t.gradient(y_pred, [averaged_samples])[0]
     gradients_sqr = tf.math.square(gradients)
     gradients_sqr_sum = tf.math.reduce_sum(gradients_sqr, axis=np.arange(1, len(gradients_sqr.shape)))
     gradient_l2_norm = tf.math.sqrt(gradients_sqr_sum)
