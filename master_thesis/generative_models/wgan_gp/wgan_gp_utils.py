@@ -154,7 +154,7 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
         generated_criticized = critic(merged_generated_samples)
         
         expanded_real_samples = tf.reshape(real_samples, (batch_size, timesteps, 1))
-        merged_real_samples = tf.concat([expanded_real_samples, supporting_real_samples], -1)
+        merged_real_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_real_samples, supporting_real_samples])
 
         real_criticized = critic(merged_real_samples)
 
