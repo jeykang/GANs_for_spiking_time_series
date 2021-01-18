@@ -116,8 +116,6 @@ def build_generator_model(generator, critic, latent_dim, timesteps, use_packing,
         supporting_generated_samples = tf.reshape(supporting_generated_samples, (batch_size, timesteps, packing_degree))
         
         merged_generated_samples = tf.keras.layers.Concatenate(axis=-1)([generated_samples, supporting_generated_samples])
-        
-        print("Concat1")
 
         generated_criticized = critic(merged_generated_samples)
 
@@ -128,6 +126,7 @@ def build_generator_model(generator, critic, latent_dim, timesteps, use_packing,
 
         generator_model = tf.keras.Model([noise_samples], generated_criticized, name='generator_model')
         generator_model.compile(optimizer=tf.keras.optimizers.Adam(generator_lr, beta_1=0, beta_2=0.9), loss=utils.wasserstein_loss)
+    generator_model.summary()
     return generator_model
 
 
@@ -153,14 +152,10 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
 
         merged_generated_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_generated_samples, expanded_generated_supporting_samples])
 
-        print("Concat2")
-        
         generated_criticized = critic(merged_generated_samples)
         
         expanded_real_samples = tf.reshape(real_samples, (batch_size, timesteps, 1))
         merged_real_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_real_samples, supporting_real_samples])
-
-        print("Concat3")
         
         real_criticized = critic(merged_real_samples)
 
@@ -175,8 +170,6 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
         averaged_support_samples = tf.reshape(averaged_support_samples, (batch_size, timesteps, packing_degree))
 
         merged_averaged_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_averaged_samples, averaged_support_samples])
-
-        print("Concat4")
         
         averaged_criticized = critic(merged_averaged_samples)
 
@@ -210,6 +203,7 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
         critic_model.compile(optimizer=tf.keras.optimizers.Adam(critic_lr, beta_1=0, beta_2=0.9),
                              loss=[utils.wasserstein_loss, utils.wasserstein_loss, partial_gp_loss],
                              loss_weights=[1 / 3, 1 / 3, 1 / 3])
+    critic_model.summary()
     return critic_model
 
 
