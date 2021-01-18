@@ -210,7 +210,7 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
 def gradient_penalty_loss(_, y_pred, averaged_samples, gradient_penalty_weight):
     print("y_pred:", y_pred)
     print("averaged_samples:", averaged_samples)
-    gradients = tf.keras.backend.gradients(y_pred, averaged_samples)[0]
+    gradients = tf.gradients(y_pred, averaged_samples)[0]
     gradients_sqr = tf.math.square(gradients)
     gradients_sqr_sum = tf.math.reduce_sum(gradients_sqr, axis=np.arange(1, len(gradients_sqr.shape)))
     gradient_l2_norm = tf.math.sqrt(gradients_sqr_sum)
@@ -227,3 +227,6 @@ class RandomWeightedAverage(tf.keras.layers.Layer):
         weights = tf.random.uniform((self._batch_size, 1))
         averaged_inputs = (weights * inputs[0]) + ((1 - weights) * inputs[1])
         return averaged_inputs
+      
+    def compute_output_shape(self, input_shape):
+        return input_shape[0]
