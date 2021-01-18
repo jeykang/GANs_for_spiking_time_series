@@ -6,6 +6,8 @@ from tensorflow.keras.layers import *
 from generative_models import utils
 from generative_models.wgan_gp import wgan_gp_utils
 
+import numpy as np
+
 
 class WGAN_GP:
     def __init__(self, config):
