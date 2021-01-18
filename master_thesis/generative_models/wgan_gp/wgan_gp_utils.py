@@ -221,7 +221,7 @@ class RandomWeightedAverage(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self._batch_size = batch_size
 
-    def _merge_function(self, inputs):
+    def call(self, inputs):
         weights = tf.random.uniform((self._batch_size, 1))
         averaged_inputs = (weights * inputs[0]) + ((1 - weights) * inputs[1])
         return averaged_inputs
