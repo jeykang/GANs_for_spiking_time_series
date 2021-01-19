@@ -41,8 +41,8 @@ UpSampling1D
 
 def DeConvBlock(x):
   c = tf.keras.layers.Conv1D(32, 3, padding="same")(x)
-  #b = tf.keras.layers.BatchNormalization()(c)
-  a = tf.keras.layers.LeakyReLU(alpha=0.2)(c)
+  b = tf.keras.layers.BatchNormalization()(c)
+  a = tf.keras.layers.LeakyReLU(alpha=0.2)(b)
   u = tf.keras.layers.UpSampling1D(size=2)(a)
   return u
 
@@ -50,8 +50,8 @@ def build_generator(latent_dim, timesteps):
     
     gen_input = tf.keras.layers.Input((latent_dim,))
     gdense0 = tf.keras.layers.Dense(15)(gen_input)
-    #bnorm0 = tf.keras.layers.BatchNormalization()(gdense0)
-    gactivation0 = tf.keras.layers.LeakyReLU(alpha=0.2)(gdense0)
+    bnorm0 = tf.keras.layers.BatchNormalization()(gdense0)
+    gactivation0 = tf.keras.layers.LeakyReLU(alpha=0.2)(bnorm0)
 
     #expand dims before entry into deconv block- something the original paper failed to mention
     gactivation0 = tf.expand_dims(gactivation0, axis=2)
@@ -60,8 +60,8 @@ def build_generator(latent_dim, timesteps):
     deconv1 = DeConvBlock(deconv0)
     deconv2 = DeConvBlock(deconv1)
     gconv0 = tf.keras.layers.Conv1D(1, 3, padding="same")(deconv2)
-    #bnorm1 = tf.keras.layers.BatchNormalization()(gconv0)
-    gactivation1 = tf.keras.layers.LeakyReLU(alpha=0.2)(gconv0)
+    bnorm1 = tf.keras.layers.BatchNormalization()(gconv0)
+    gactivation1 = tf.keras.layers.LeakyReLU(alpha=0.2)(bnorm1)
 
     #squeeze previously expanded dim now that it's not needed anymore
     gactivation1 = tf.squeeze(gactivation1, axis=-1)
