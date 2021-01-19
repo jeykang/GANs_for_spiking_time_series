@@ -2,6 +2,8 @@ from functools import partial
 from generative_models import utils
 import tensorflow as tf
 
+import numpy as np
+
 tf.compat.v1.disable_eager_execution()
 
 """
