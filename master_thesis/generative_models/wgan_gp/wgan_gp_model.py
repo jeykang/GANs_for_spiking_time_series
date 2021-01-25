@@ -83,7 +83,7 @@ class WGAN_GP:
                                                                                   self._packing_degree)
                     supporting_noise = np.random.normal(0, 1,
                                                         (self._batch_size, self._latent_dim, self._packing_degree))
-                    inputs.extend([supporting_transactions, supporting_noise, supporting_indexes])
+                    inputs.extend([supporting_transactions, supporting_noise, supporting_indexes.reshape(((self._batch_size * self._packing_degree), 1))])
 
                 critic_losses.append(self._critic_model.train_on_batch(inputs, [ones, neg_ones, zeros])[0])
             critic_loss = np.mean(critic_losses)
@@ -91,13 +91,13 @@ class WGAN_GP:
             generator_losses = []
             for _ in range(self._n_generator):
                 noise = np.random.normal(0, 1, (self._batch_size, self._latent_dim))
-                sampled_labels = np.random.randint(0, self._num_classes, self._batch_size).reshape(-1, self._batch_size)
+                sampled_labels = np.random.randint(0, self._num_classes, self._batch_size)
                 inputs = [noise, sampled_labels]
 
                 if self._use_packing:
                     supporting_noise = np.random.normal(0, 1,
                                                         (self._batch_size, self._latent_dim, self._packing_degree))
-                    supporting_labels = np.random.randint(0, self._num_classes, self._batch_size).reshape(-1, self._batch_size)
+                    supporting_labels = np.random.randint(0, self._num_classes, self._batch_size)
                     inputs.extend([supporting_noise, supporting_labels])
 
                 generator_losses.append(self._generator_model.train_on_batch(inputs, ones))
