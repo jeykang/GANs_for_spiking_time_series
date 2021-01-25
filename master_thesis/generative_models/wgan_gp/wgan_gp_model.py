@@ -35,7 +35,7 @@ class WGAN_GP:
         self._use_mbd = config['use_mbd']
         self._use_packing = config['use_packing']
         
-        self._label_column = config['label_column']
+        #self._label_column = config['label_column']
         self._num_classes = 100000
         self._num_users = 45
 
