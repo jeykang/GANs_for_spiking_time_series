@@ -271,7 +271,11 @@ class RandomWeightedAverage(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self._batch_size = batch_size
         
-        self.w = tf.Variable(initial_value=tf.random.uniform((self._batch_size, 1)), trainable=True)
+        #self.w = tf.random.uniform((self._batch_size, 1))
+        self.w = self.add_weight("w", shape=(self._batch_size, 1), trainable=True, initializer=tf.keras.initializers.RandomUniform())
+
+    def build(self, input_shape):
+        self.built = True
 
     def call(self, inputs):
         averaged_inputs = (self.w * inputs[0]) + ((1 - self.w) * inputs[1])
@@ -279,12 +283,11 @@ class RandomWeightedAverage(tf.keras.layers.Layer):
       
     def compute_output_shape(self, input_shape):
         return input_shape[0]
-      
+     
     def get_config(self):
 
         config = super().get_config().copy()
         config.update({
-            '_batch_size': self._batch_size,
-            'w': self.w,
+            '_batch_size': self._batch_size
         })
         return config
