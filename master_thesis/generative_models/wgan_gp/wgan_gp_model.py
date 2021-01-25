@@ -34,6 +34,10 @@ class WGAN_GP:
         self._generated_datesets_dir = config['generated_datesets_dir']
         self._use_mbd = config['use_mbd']
         self._use_packing = config['use_packing']
+        
+        self._label_column = config['label_column']
+        self._num_classes = 100000
+        self._num_users = 45
 
         self._lr_decay_factor = config['lr_decay_factor']
         self._lr_decay_steps = config['lr_decay_steps']
@@ -66,8 +70,11 @@ class WGAN_GP:
             for _ in range(self._n_critic):
                 indexes = np.random.randint(0, dataset.shape[0], self._batch_size)
                 batch_transactions = dataset[indexes].reshape(self._batch_size, self._timesteps)
+                
+                batch_labels = indexes.reshape(self._batch_size, 1) #really just user ids
+                
                 noise = np.random.normal(0, 1, (self._batch_size, self._latent_dim))
-                inputs = [batch_transactions, noise]
+                inputs = [batch_transactions, noise, batch_labels]
 
                 if self._use_packing:
                     supporting_indexes = np.random.randint(0, dataset.shape[0],
@@ -76,7 +83,7 @@ class WGAN_GP:
                                                                                   self._packing_degree)
                     supporting_noise = np.random.normal(0, 1,
                                                         (self._batch_size, self._latent_dim, self._packing_degree))
-                    inputs.extend([supporting_transactions, supporting_noise])
+                    inputs.extend([supporting_transactions, supporting_noise, supporting_indexes])
 
                 critic_losses.append(self._critic_model.train_on_batch(inputs, [ones, neg_ones, zeros])[0])
             critic_loss = np.mean(critic_losses)
@@ -84,12 +91,14 @@ class WGAN_GP:
             generator_losses = []
             for _ in range(self._n_generator):
                 noise = np.random.normal(0, 1, (self._batch_size, self._latent_dim))
-                inputs = [noise]
+                sampled_labels = np.random.randint(0, self._num_classes, self._batch_size).reshape(-1, self._batch_size)
+                inputs = [noise, sampled_labels]
 
                 if self._use_packing:
                     supporting_noise = np.random.normal(0, 1,
                                                         (self._batch_size, self._latent_dim, self._packing_degree))
-                    inputs.append(supporting_noise)
+                    supporting_labels = np.random.randint(0, self._num_classes, self._batch_size).reshape(-1, self._batch_size)
+                    inputs.extend([supporting_noise, supporting_labels])
 
                 generator_losses.append(self._generator_model.train_on_batch(inputs, ones))
             generator_loss = np.mean(generator_losses)
@@ -166,7 +175,9 @@ class WGAN_GP:
 
     def _generate_dataset(self):
         z_samples = np.random.normal(0, 1, (self._dataset_generation_size, self._latent_dim))
-        generated_dataset = self._generator.predict(z_samples)
+        #z_labels = np.random.randint(0, self._num_users, self._dataset_generation_size)
+        z_labels = np.full((self._dataset_generation_size, 1), 0)
+        generated_dataset = self._generator.predict([z_samples, z_labels])
         np.save(self._generated_datesets_dir + ('/%d_generated_data' % self._epoch), generated_dataset)
         np.save(self._generated_datesets_dir + '/last', generated_dataset)
 
