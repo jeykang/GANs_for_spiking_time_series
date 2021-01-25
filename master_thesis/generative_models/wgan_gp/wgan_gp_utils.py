@@ -114,6 +114,7 @@ def build_generator_model(generator, critic, latent_dim, timesteps, use_packing,
 
         generator_model = Model([noise_samples], generated_criticized, 'generator_model')
         generator_model.compile(optimizer=Adam(generator_lr, beta_1=0, beta_2=0.9), loss=utils.wasserstein_loss)
+    generator_model.summary()
     return generator_model
 
 
@@ -199,6 +200,7 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
         critic_model.compile(optimizer=Adam(critic_lr, beta_1=0, beta_2=0.9),
                              loss=[utils.wasserstein_loss, utils.wasserstein_loss, partial_gp_loss],
                              loss_weights=[1 / 3, 1 / 3, 1 / 3])
+    critic_model.summary()
     return critic_model
 
 
