@@ -161,19 +161,19 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
         supporting_real_samples = tf.keras.layers.Input((timesteps, packing_degree))
         labels2 = tf.keras.layers.Input((1, ))
 
-        reshaped_supporting_noise_samples = tf.reshape(supporting_noise_samples, (batch_size * packing_degree, latent_dim))
+        reshaped_supporting_noise_samples = tf.keras.layers.Reshape((batch_size * packing_degree, latent_dim))(supporting_noise_samples)
         
         generated_samples = generator([noise_samples, labels])
         supporting_generated_samples = generator([reshaped_supporting_noise_samples, labels2])
         
-        expanded_generated_samples = tf.reshape(generated_samples, (batch_size, timesteps, 1))
-        expanded_generated_supporting_samples = tf.reshape(supporting_generated_samples, (batch_size, timesteps, packing_degree))
+        expanded_generated_samples = tf.keras.layers.Reshape((batch_size, timesteps, 1))(generated_samples)
+        expanded_generated_supporting_samples = tf.keras.layers.Reshape((batch_size, timesteps, packing_degree))(supporting_generated_samples)
 
         merged_generated_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_generated_samples, expanded_generated_supporting_samples])
 
         generated_criticized = critic(merged_generated_samples)
         
-        expanded_real_samples = tf.reshape(real_samples, (batch_size, timesteps, 1))
+        expanded_real_samples = tf.keras.layers.Reshape((batch_size, timesteps, 1))(real_samples)
         merged_real_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_real_samples, supporting_real_samples])
         
         real_criticized = critic(merged_real_samples)
