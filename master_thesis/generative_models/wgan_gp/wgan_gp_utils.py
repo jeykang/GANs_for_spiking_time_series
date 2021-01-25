@@ -46,18 +46,25 @@ def DeConvBlock(x):
   u = tf.keras.layers.UpSampling1D(size=2)(a)
   return u
 
-def build_generator(latent_dim, timesteps, num_classes=100000):
+def build_generator(latent_dim, timesteps, batch_size=64, num_classes=100000):
     
     gen_input = tf.keras.layers.Input((latent_dim,))
     label_input = tf.keras.layers.Input((1, ))
-    label_embed = tf.keras.layers.Embedding(num_classes, latent_dim)(label_input)
+    print("labels shape:", label_input.shape)
+    label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, latent_dim)(label_input))
     mixed_input = gen_input * label_embed
+    print("mixed_input shape:", mixed_input.shape)
+    #mixed_input = mixed_input * tf.constant([[1.0, 2.0], [3.0, 4.0]])
+    #mixed_input = tf.reshape(mixed_input, (-1, latent_dim))
+    #print("mixed_input shape2:", mixed_input.shape)
+    #mixed_input = gen_input
     gdense0 = tf.keras.layers.Dense(15)(mixed_input)
     bnorm0 = tf.keras.layers.BatchNormalization()(gdense0)
     gactivation0 = tf.keras.layers.LeakyReLU(alpha=0.2)(bnorm0)
-
+    
     #expand dims before entry into deconv block- something the original paper failed to mention
     gactivation0 = tf.expand_dims(gactivation0, axis=2)
+    #print("gactivation shape (after expand):", gactivation0.shape)
 
     deconv0 = DeConvBlock(gactivation0)
     deconv1 = DeConvBlock(deconv0)
@@ -170,12 +177,13 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
         merged_real_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_real_samples, supporting_real_samples])
         
         real_criticized = critic(merged_real_samples)
-
+        print("RWA1 inputs shapes:", real_samples.shape, generated_samples.shape)
         averaged_samples = RandomWeightedAverage(batch_size)([real_samples, generated_samples])
         
         expanded_averaged_samples = tf.reshape(averaged_samples, (batch_size, timesteps, 1))
         
         expanded_supporting_real_samples = tf.reshape(supporting_real_samples, (batch_size * packing_degree, timesteps))
+        print("RWA2 inputs shapes:", expanded_supporting_real_samples.shape, supporting_generated_samples.shape)
         averaged_support_samples = RandomWeightedAverage((batch_size * packing_degree))(
             [expanded_supporting_real_samples, supporting_generated_samples])
         
@@ -214,6 +222,7 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
         generated_criticized = critic(generated_samples)
         real_criticized = critic(real_samples)
 
+        print("RWA3 inputs shapes:", real_samples.shape, generated_samples.shape)
         averaged_samples = RandomWeightedAverage(batch_size)([real_samples, generated_samples])
         averaged_criticized = critic(averaged_samples)
         """
@@ -244,11 +253,11 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
 
 
 def gradient_penalty_loss(_, y_pred, averaged_samples, gradient_penalty_weight, gradient_tape=None):
-    print("y_pred:", y_pred)
-    print("averaged_samples:", averaged_samples)
+    #print("y_pred:", y_pred)
+    #print("averaged_samples:", averaged_samples)
     gradients = tf.gradients(y_pred, averaged_samples)
     #gradients = gradient_tape.gradient(y_pred, [averaged_samples])
-    print("gradients:", gradients)
+    #print("gradients:", gradients)
     gradients = gradients[0]
     gradients_sqr = tf.math.square(gradients)
     gradients_sqr_sum = tf.math.reduce_sum(gradients_sqr, axis=np.arange(1, len(gradients_sqr.shape)))
