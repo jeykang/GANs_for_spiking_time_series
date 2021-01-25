@@ -142,7 +142,7 @@ def load_splitted_dataset(split=0.3, timesteps=90,
     return train, test, timesteps
 
 
-def load_resized_mnist(split=0.3, timesteps=100):
+def load_resized_mnist(split=0.3, timesteps=64 * 24):
     side = int(np.sqrt(timesteps))
 
     from tf.keras.datasets import mnist
@@ -182,14 +182,14 @@ def generate_run_dir(model_type):
 
 
 def get_global_config():
-    batch_size = 64
+    batch_size = 256
     epochs = 1000000
     latent_dim = 2
     img_frequency = 10000
     loss_frequency = 5000
     latent_space_frequency = 50000
-    model_save_frequency = 100000
-    dataset_generation_frequency = 100000
+    model_save_frequency = 10000
+    dataset_generation_frequency = 10000
     dataset_generation_size = 50000
 
     n_generator = 1
