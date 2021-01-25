@@ -140,7 +140,8 @@ class WGAN_GP:
     def _save_samples(self):
         rows, columns = 6, 6
         noise = np.random.normal(0, 1, (rows * columns, self._latent_dim))
-        generated_transactions = self._generator.predict(noise)
+        indexes = np.full((rows * columns, 1), 0)
+        generated_transactions = self._generator.predict([noise, indexes])
 
         filenames = [self._img_dir + ('/%07d.png' % self._epoch), self._img_dir + '/last.png']
         utils.save_samples(generated_transactions, rows, columns, filenames)
@@ -149,12 +150,13 @@ class WGAN_GP:
         grid_size = 6
 
         latent_space_inputs = np.zeros((grid_size * grid_size, self._latent_dim))
+        indexes = np.full((grid_size * grid_size, 1), 0)
 
         for i, v_i in enumerate(np.linspace(-1.5, 1.5, grid_size, True)):
             for j, v_j in enumerate(np.linspace(-1.5, 1.5, grid_size, True)):
                 latent_space_inputs[i * grid_size + j, :2] = [v_i, v_j]
 
-        generated_data = self._generator.predict(latent_space_inputs)
+        generated_data = self._generator.predict([latent_space_inputs, indexes])
 
         filenames = [self._img_dir + '/latent_space.png']
         utils.save_latent_space(generated_data, grid_size, filenames)
