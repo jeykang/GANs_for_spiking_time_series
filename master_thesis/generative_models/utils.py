@@ -220,6 +220,7 @@ def get_global_config():
         'gamma': gamma,
         'generator_lr': generator_lr,
         'critic_lr': critic_lr
+        #'label_column': "account_id"
     }
 
     return config
