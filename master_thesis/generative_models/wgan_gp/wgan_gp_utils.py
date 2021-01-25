@@ -46,10 +46,13 @@ def DeConvBlock(x):
   u = tf.keras.layers.UpSampling1D(size=2)(a)
   return u
 
-def build_generator(latent_dim, timesteps):
+def build_generator(latent_dim, timesteps, num_classes=100000):
     
     gen_input = tf.keras.layers.Input((latent_dim,))
-    gdense0 = tf.keras.layers.Dense(15)(gen_input)
+    label_input = tf.keras.layers.Input((1, ))
+    label_embed = tf.keras.layers.Embedding(num_classes, latent_dim)(label_input)
+    mixed_input = gen_input * label_embed
+    gdense0 = tf.keras.layers.Dense(15)(mixed_input)
     bnorm0 = tf.keras.layers.BatchNormalization()(gdense0)
     gactivation0 = tf.keras.layers.LeakyReLU(alpha=0.2)(bnorm0)
 
@@ -69,7 +72,7 @@ def build_generator(latent_dim, timesteps):
     gdense1 = tf.keras.layers.Dense(timesteps)(gactivation1)
     activation2 = tf.keras.layers.Activation("tanh")(gdense1)
 
-    generator = tf.keras.Model(gen_input, activation2, name='generator')
+    generator = tf.keras.Model([gen_input, label_input], activation2, name='generator')
     return generator
 
 
@@ -107,7 +110,8 @@ def build_generator_model(generator, critic, latent_dim, timesteps, use_packing,
     critic.trainable = False
 
     noise_samples = tf.keras.layers.Input((latent_dim,))
-    generated_samples = generator(noise_samples)
+    labels = tf.keras.layers.Input((1, ))
+    generated_samples = generator(noise_samples, labels)
 
     if use_packing:
         generated_samples = tf.reshape(generated_samples, (batch_size, timesteps, 1))
@@ -115,7 +119,7 @@ def build_generator_model(generator, critic, latent_dim, timesteps, use_packing,
         
         reshaped_supporting_noise_samples = tf.reshape(supporting_noise_samples, (batch_size * packing_degree, latent_dim))
 
-        supporting_generated_samples = generator(reshaped_supporting_noise_samples)
+        supporting_generated_samples = generator(reshaped_supporting_noise_samples, labels)
         
         supporting_generated_samples = tf.reshape(supporting_generated_samples, (batch_size, timesteps, packing_degree))
         
@@ -123,12 +127,12 @@ def build_generator_model(generator, critic, latent_dim, timesteps, use_packing,
 
         generated_criticized = critic(merged_generated_samples)
 
-        generator_model = tf.keras.Model([noise_samples, supporting_noise_samples], generated_criticized, name='generator_model')
+        generator_model = tf.keras.Model([noise_samples, labels, supporting_noise_samples], generated_criticized, name='generator_model')
         generator_model.compile(optimizer=tf.keras.optimizers.Adam(generator_lr, beta_1=0, beta_2=0.9), loss=utils.wasserstein_loss)
     else:
         generated_criticized = critic(generated_samples)
 
-        generator_model = tf.keras.Model([noise_samples], generated_criticized, name='generator_model')
+        generator_model = tf.keras.Model([noise_samples, labels], generated_criticized, name='generator_model')
         generator_model.compile(optimizer=tf.keras.optimizers.Adam(generator_lr, beta_1=0, beta_2=0.9), loss=utils.wasserstein_loss)
     generator_model.summary()
     return generator_model
@@ -141,6 +145,8 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
 
     noise_samples = tf.keras.layers.Input((latent_dim,))
     real_samples = tf.keras.layers.Input((timesteps,))
+    
+    labels = tf.keras.layers.Input((1, ))
 
     if use_packing:
         supporting_noise_samples = tf.keras.layers.Input((latent_dim, packing_degree))
@@ -148,8 +154,8 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
 
         reshaped_supporting_noise_samples = tf.reshape(supporting_noise_samples, (batch_size * packing_degree, latent_dim))
         
-        generated_samples = generator(noise_samples)
-        supporting_generated_samples = generator(reshaped_supporting_noise_samples)
+        generated_samples = generator(noise_samples, labels)
+        supporting_generated_samples = generator(reshaped_supporting_noise_samples, labels)
         
         expanded_generated_samples = tf.reshape(generated_samples, (batch_size, timesteps, 1))
         expanded_generated_supporting_samples = tf.reshape(supporting_generated_samples, (batch_size, timesteps, packing_degree))
@@ -195,14 +201,14 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
         """
         partial_gp_loss.__name__ = 'gradient_penalty'
 
-        critic_model = tf.keras.Model([real_samples, noise_samples, supporting_real_samples, supporting_noise_samples],
+        critic_model = tf.keras.Model([real_samples, noise_samples, labels, supporting_real_samples, supporting_noise_samples],
                              [real_criticized, generated_criticized, averaged_criticized], name='critic_model')
 
         critic_model.compile(optimizer=tf.keras.optimizers.Adam(critic_lr, beta_1=0, beta_2=0.9),
                              loss=[utils.wasserstein_loss, utils.wasserstein_loss, partial_gp_loss],
                              loss_weights=[1 / 3, 1 / 3, 1 / 3])
     else:
-        generated_samples = generator(noise_samples)
+        generated_samples = generator(noise_samples, labels)
         generated_criticized = critic(generated_samples)
         real_criticized = critic(real_samples)
 
@@ -225,7 +231,7 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
         """
         partial_gp_loss.__name__ = 'gradient_penalty'
 
-        critic_model = tf.keras.Model([real_samples, noise_samples],
+        critic_model = tf.keras.Model([real_samples, noise_samples, labels],
                              [real_criticized, generated_criticized, averaged_criticized], name='critic_model')
 
         critic_model.compile(optimizer=tf.keras.optimizers.Adam(critic_lr, beta_1=0, beta_2=0.9),
