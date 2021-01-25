@@ -2,7 +2,7 @@ import os
 import pickle
 
 from tensorflow.keras.layers import *
-
+import tensorflow as tf
 from generative_models import utils
 from generative_models.wgan_gp import wgan_gp_utils
 
@@ -170,10 +170,15 @@ class WGAN_GP:
     def _save_models(self):
         dir = self._model_dir + '/' + str(self._epoch) + '/'
         os.mkdir(dir)
-        self._generator_model.save(dir + 'generator_model.pb')
-        self._critic_model.save(dir + 'critic_model.pb')
-        self._generator.save(dir + 'generator.pb')
-        self._critic.save(dir + 'critic.pb')
+        self._generator_model.save(dir + 'generator_model.h5')
+        self._critic_model.save(dir + 'critic_model.h5')
+        self._generator.save(dir + 'generator.h5')
+        self._critic.save(dir + 'critic.h5')
+
+        """tf.saved_model.save(self._generator_model, dir + 'generator_model.pb')
+        tf.saved_model.save(self._critic_model, dir + 'critic_model.pb')
+        tf.saved_model.save(self._generator, dir + 'generator.pb')
+        tf.saved_model.save(self._critic, dir + 'critic.pb')"""
 
     def _generate_dataset(self):
         z_samples = np.random.normal(0, 1, (self._dataset_generation_size, self._latent_dim))
