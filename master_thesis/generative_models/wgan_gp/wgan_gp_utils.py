@@ -52,7 +52,7 @@ def build_generator(latent_dim, timesteps, batch_size=64, num_classes=100000):
     label_input = tf.keras.layers.Input((1, ))
     print("labels shape:", label_input.shape)
     label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, latent_dim)(label_input))
-    mixed_input = tf.keras.layers.Concatenate()([gen_input, label_embed])
+    mixed_input = gen_input * label_embed
     print("mixed_input shape:", mixed_input.shape)
     #mixed_input = mixed_input * tf.constant([[1.0, 2.0], [3.0, 4.0]])
     #mixed_input = tf.reshape(mixed_input, (-1, latent_dim))
@@ -92,11 +92,11 @@ def build_critic(timesteps, use_mbd, use_packing, packing_degree, num_classes=10
         critic_input = tf.expand_dims(input_temp, axis=-1)
 
     label_input = tf.keras.layers.Input((1,))
-    label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, timesteps)(label_input))
+    label_embed = tf.expand_dims(tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, timesteps)(label_input)), axis=-1)
     
-    mixed_input = tf.keras.layers.Concatenate([critic_input, label_embed])
+    mixed_input = critic_input * label_embed
 
-    conv0 = ConvBlock(critic_input)
+    conv0 = ConvBlock(mixed_input)
     conv1 = ConvBlock(conv0)
     conv2 = ConvBlock(conv1)
     cactivation0 = tf.keras.layers.LeakyReLU(alpha=0.2)(conv2)
