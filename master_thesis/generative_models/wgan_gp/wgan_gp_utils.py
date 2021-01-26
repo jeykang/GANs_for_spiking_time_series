@@ -268,6 +268,5 @@ class RandomWeightedAverage(tf.keras.layers.Layer):
         config = super().get_config().copy()
         config.update({
             '_batch_size': self._batch_size,
-            'w': self.w,
         })
         return config
