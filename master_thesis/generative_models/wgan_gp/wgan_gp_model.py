@@ -33,7 +33,8 @@ class WGAN_GP:
         self._model_dir = config['model_dir']
         self._generated_datesets_dir = config['generated_datesets_dir']
         self._use_mbd = config['use_mbd']
-        self._use_packing = config['use_packing']
+        #self._use_packing = config['use_packing']
+        self._use_packing = True
         
         #self._label_column = config['label_column']
         self._num_classes = 100000
