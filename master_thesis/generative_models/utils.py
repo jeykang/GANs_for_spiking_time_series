@@ -128,7 +128,7 @@ def split_data(dataset, timesteps):
         return splitted_data
 
 
-def load_splitted_dataset(split=0.3, timesteps=90,
+def load_splitted_dataset(split=0.3, timesteps=60 *24,
                           dataset_filepath='../datasets/berka_dataset/usable/normalized_transactions_months.npy'):
     normalized_transactions_filepath = dataset_filepath
 
