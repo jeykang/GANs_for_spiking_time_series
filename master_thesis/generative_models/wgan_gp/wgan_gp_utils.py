@@ -52,7 +52,8 @@ def build_generator(latent_dim, timesteps, batch_size=64, num_classes=100000):
     label_input = tf.keras.layers.Input((1, ))
     print("labels shape:", label_input.shape)
     label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, latent_dim)(label_input))
-    mixed_input = gen_input * label_embed
+    #mixed_input = gen_input * label_embed
+    mixed_input = tf.keras.layers.Concatenate(axis=1)([gen_input, label_embed])
     print("mixed_input shape:", mixed_input.shape)
     #mixed_input = mixed_input * tf.constant([[1.0, 2.0], [3.0, 4.0]])
     #mixed_input = tf.reshape(mixed_input, (-1, latent_dim))
@@ -87,14 +88,23 @@ def build_critic(timesteps, use_mbd, use_packing, packing_degree, num_classes=10
     if use_packing:
         input_temp = tf.keras.layers.Input((timesteps, packing_degree + 1))
         critic_input = input_temp
+        label_input = tf.keras.layers.Input((1, packing_degree))
     else:
         input_temp = tf.keras.layers.Input((timesteps,))
         critic_input = tf.expand_dims(input_temp, axis=-1)
-
-    label_input = tf.keras.layers.Input((1,))
-    label_embed = tf.expand_dims(tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, timesteps)(label_input)), axis=-1)
+        label_input = tf.keras.layers.Input((1,))
     
-    mixed_input = critic_input * label_embed
+    #label_embed = tf.keras.layers.Dense(timesteps)(label_input)
+    #label_embed = tf.expand_dims(label_embed, axis=-1)
+    label_embed = tf.reshape(tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, timesteps)(label_input)), (timesteps, packing_degree))
+    #label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, timesteps)(label_input))
+
+    #flat_input = tf.keras.layers.Flatten()(critic_input)
+    
+    #mixed_input = critic_input * label_embed
+    mixed_input = tf.keras.layers.Concatenate(axis=-1)([critic_input, label_embed])
+
+    #mixed_input = tf.keras.layers.Reshape((timesteps, -1))(mixed_input)
 
     conv0 = ConvBlock(mixed_input)
     conv1 = ConvBlock(conv0)
@@ -138,7 +148,11 @@ def build_generator_model(generator, critic, latent_dim, timesteps, use_packing,
         
         merged_generated_samples = tf.keras.layers.Concatenate(axis=-1)([generated_samples, supporting_generated_samples])
 
-        merged_labels = tf.keras.layers.Concatenate()([labels, labels2])
+        labels2_reshape = tf.reshape(labels2, (batch_size, 1, packing_degree))
+        labels_reshape = tf.reshape(labels, (batch_size, 1, 1))
+
+        merged_labels = tf.keras.layers.Concatenate(axis=-1)([labels_reshape, labels2_reshape])
+        print("merged_labels:", merged_labels.shape)
 
         generated_criticized = critic([merged_generated_samples, merged_labels])
 
@@ -178,7 +192,10 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
 
         merged_generated_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_generated_samples, expanded_generated_supporting_samples])
 
-        merged_labels = tf.keras.layers.Concatenate()([labels, labels2])
+        labels2_reshape = tf.reshape(labels2, (batch_size, 1, packing_degree))
+        labels_reshape = tf.reshape(labels, (batch_size, 1, 1))
+
+        merged_labels = tf.keras.layers.Concatenate(axis=-1)([labels_reshape, labels2_reshape])
 
         generated_criticized = critic([merged_generated_samples, merged_labels])
         
