@@ -83,14 +83,19 @@ def build_generator(latent_dim, timesteps, batch_size=64, num_classes=100000):
     return generator
 
 
-def build_critic(timesteps, use_mbd, use_packing, packing_degree):
+def build_critic(timesteps, use_mbd, use_packing, packing_degree, num_classes=100000):
     if use_packing:
         input_temp = tf.keras.layers.Input((timesteps, packing_degree + 1))
         critic_input = input_temp
     else:
         input_temp = tf.keras.layers.Input((timesteps,))
         critic_input = tf.expand_dims(input_temp, axis=-1)
+
+    label_input = tf.keras.layers.Input((1,))
+    label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, timesteps)(label_input))
     
+    mixed_input = critic_input * label_embed
+
     conv0 = ConvBlock(critic_input)
     conv1 = ConvBlock(conv0)
     conv2 = ConvBlock(conv1)
@@ -106,7 +111,7 @@ def build_critic(timesteps, use_mbd, use_packing, packing_degree):
     cactivation2 = tf.keras.layers.LeakyReLU(alpha=0.2)(cdense1)
     cdense2 = tf.keras.layers.Dense(1)(cactivation2)
 
-    critic = tf.keras.Model(input_temp, cdense2, name='critic')
+    critic = tf.keras.Model([input_temp, label_input], cdense2, name='critic')
 
     return critic
 
@@ -133,12 +138,14 @@ def build_generator_model(generator, critic, latent_dim, timesteps, use_packing,
         
         merged_generated_samples = tf.keras.layers.Concatenate(axis=-1)([generated_samples, supporting_generated_samples])
 
-        generated_criticized = critic(merged_generated_samples)
+        merged_labels = tf.keras.layers.Concatenate()([labels, labels2])
+
+        generated_criticized = critic([merged_generated_samples, merged_labels])
 
         generator_model = tf.keras.Model([noise_samples, labels, supporting_noise_samples, labels2], generated_criticized, name='generator_model')
         generator_model.compile(optimizer=tf.keras.optimizers.Adam(generator_lr, beta_1=0, beta_2=0.9), loss=utils.wasserstein_loss)
     else:
-        generated_criticized = critic(generated_samples)
+        generated_criticized = critic([generated_samples, labels])
 
         generator_model = tf.keras.Model([noise_samples, labels], generated_criticized, name='generator_model')
         generator_model.compile(optimizer=tf.keras.optimizers.Adam(generator_lr, beta_1=0, beta_2=0.9), loss=utils.wasserstein_loss)
@@ -171,12 +178,14 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
 
         merged_generated_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_generated_samples, expanded_generated_supporting_samples])
 
-        generated_criticized = critic(merged_generated_samples)
+        merged_labels = tf.keras.layers.Concatenate()([labels, labels2])
+
+        generated_criticized = critic([merged_generated_samples, merged_labels])
         
         expanded_real_samples = tf.keras.layers.Reshape((batch_size, timesteps, 1))(real_samples)
         merged_real_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_real_samples, supporting_real_samples])
         
-        real_criticized = critic(merged_real_samples)
+        real_criticized = critic([merged_real_samples, merged_labels])
         print("RWA1 inputs shapes:", real_samples.shape, generated_samples.shape)
         averaged_samples = RandomWeightedAverage(batch_size)([real_samples, generated_samples])
         
@@ -190,7 +199,7 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
         averaged_support_samples = tf.reshape(averaged_support_samples, (batch_size, timesteps, packing_degree))
 
         merged_averaged_samples = tf.keras.layers.Concatenate(axis=-1)([expanded_averaged_samples, averaged_support_samples])
-        averaged_criticized = critic(merged_averaged_samples)
+        averaged_criticized = critic([merged_averaged_samples, merged_labels])
         
         """
         with tf.GradientTape() as t:
@@ -219,12 +228,12 @@ def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, pa
                              loss_weights=[1 / 3, 1 / 3, 1 / 3])
     else:
         generated_samples = generator([noise_samples, labels])
-        generated_criticized = critic(generated_samples)
-        real_criticized = critic(real_samples)
+        generated_criticized = critic([generated_samples, labels])
+        real_criticized = critic([real_samples, labels])
 
         print("RWA3 inputs shapes:", real_samples.shape, generated_samples.shape)
         averaged_samples = RandomWeightedAverage(batch_size)([real_samples, generated_samples])
-        averaged_criticized = critic(averaged_samples)
+        averaged_criticized = critic([averaged_samples, labels])
         """
         with tf.GradientTape() as t:
           t.watch(averaged_samples)
