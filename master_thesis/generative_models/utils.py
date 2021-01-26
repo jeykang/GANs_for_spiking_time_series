@@ -188,14 +188,14 @@ def get_global_config():
     img_frequency = 10000
     loss_frequency = 5000
     latent_space_frequency = 50000
-    model_save_frequency = 100000
-    dataset_generation_frequency = 100000
+    model_save_frequency = 10000
+    dataset_generation_frequency = 10000
     dataset_generation_size = 50000
 
     n_generator = 1
     n_critic = 5
-    generator_lr = 0.001
-    critic_lr = 0.001
+    generator_lr = 0.0001
+    critic_lr = 0.0001
     gradient_penality_weight = 10
     gamma = 0.5
 
