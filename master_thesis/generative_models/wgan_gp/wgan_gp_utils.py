@@ -46,30 +46,29 @@ def DeConvBlock(x):
   u = tf.keras.layers.UpSampling1D(size=2)(a)
   return u
 
-def build_generator(latent_dim, timesteps, batch_size=64, num_classes=100000):
+def build_generator(latent_dim, timesteps, batch_size=64, num_classes=45):
     
     gen_input = tf.keras.layers.Input((latent_dim,))
     label_input = tf.keras.layers.Input((1, ))
     print("labels shape:", label_input.shape)
-    label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, 50)(label_input))
-    label_embed = tf.keras.layers.Dense(15)(label_embed)
-    #mixed_input = gen_input * label_embed
-    #mixed_input = tf.keras.layers.Concatenate(axis=1)([gen_input, label_embed])
-    #print("mixed_input shape:", mixed_input.shape)
-    #mixed_input = mixed_input * tf.constant([[1.0, 2.0], [3.0, 4.0]])
-    #mixed_input = tf.reshape(mixed_input, (-1, latent_dim))
-    #print("mixed_input shape2:", mixed_input.shape)
-    #mixed_input = gen_input
-    gdense0 = tf.keras.layers.Dense(15)(gen_input)
+    label_embed = tf.keras.layers.Embedding(num_classes, latent_dim)(label_input)
+    #label_embed = tf.keras.layers.Flatten()(label_embed)
+    #label_embed = tf.keras.layers.Dense(15)(label_embed)
+    #label_embed = tf.keras.layers.BatchNormalization()(label_embed)
+    #label_embed = tf.keras.layers.Reshape((15, 1))(label_embed)
+    label_embed = tf.keras.layers.Reshape((latent_dim,))(label_embed)
+    mixed_input = tf.keras.layers.Concatenate()([gen_input, label_embed])
+    gdense0 = tf.keras.layers.Dense(15)(mixed_input)
     bnorm0 = tf.keras.layers.BatchNormalization()(gdense0)
     gactivation0 = tf.keras.layers.LeakyReLU(alpha=0.2)(bnorm0)
     
-    mixed_input = tf.keras.layers.Concatenate(axis=1)([gactivation0, label_embed])
-    print("mixed_input shape:", mixed_input.shape)
-
+    
     #expand dims before entry into deconv block- something the original paper failed to mention
-    gactivation0 = tf.expand_dims(gactivation0, axis=2)
+    
     #print("gactivation shape (after expand):", gactivation0.shape)
+
+    gactivation0 = tf.expand_dims(gactivation0, axis=2)
+    #mixed_input = tf.keras.layers.Concatenate(axis=-1)([gactivation0, label_embed])
 
     deconv0 = DeConvBlock(gactivation0)
     deconv1 = DeConvBlock(deconv0)
@@ -88,7 +87,7 @@ def build_generator(latent_dim, timesteps, batch_size=64, num_classes=100000):
     return generator
 
 
-def build_critic(timesteps, use_mbd, use_packing, packing_degree, num_classes=100000):
+def build_critic(timesteps, use_mbd, use_packing, packing_degree, num_classes=45):
     if use_packing:
         input_temp = tf.keras.layers.Input((timesteps, packing_degree + 1))
         critic_input = input_temp
@@ -98,19 +97,15 @@ def build_critic(timesteps, use_mbd, use_packing, packing_degree, num_classes=10
         critic_input = tf.expand_dims(input_temp, axis=-1)
         label_input = tf.keras.layers.Input((1,))
     
-    #label_embed = tf.keras.layers.Dense(timesteps)(label_input)
-    #label_embed = tf.expand_dims(label_embed, axis=-1)
-    label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, 50)(label_input))
-    label_embed = tf.keras.layers.Dense(timesteps * packing_degree)(label_embed)
-    label_embed = tf.keras.layers.Reshape((timesteps, packing_degree))(label_embed)
-    #label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, timesteps)(label_input))
+    label_embed = tf.keras.layers.Embedding(num_classes, timesteps)(label_input)
+    label_embed = tf.keras.layers.Reshape((timesteps,))(label_embed)
+    label_embed = tf.expand_dims(label_embed, axis=-1)
+    mixed_input = tf.keras.layers.Concatenate(axis=1)([critic_input, label_embed])
+    #label_embed = tf.keras.layers.Dense(timesteps)(label_embed)
+    #label_embed = tf.keras.layers.Reshape((timesteps, 1))(label_embed)
 
-    #flat_input = tf.keras.layers.Flatten()(critic_input)
-    
-    #mixed_input = critic_input * label_embed
-    mixed_input = tf.keras.layers.Concatenate(axis=-1)([critic_input, label_embed])
+    #mixed_input = tf.keras.layers.Concatenate(axis=-1)([critic_input, label_embed])
 
-    #mixed_input = tf.keras.layers.Reshape((timesteps, -1))(mixed_input)
 
     conv0 = ConvBlock(mixed_input)
     conv1 = ConvBlock(conv0)
@@ -134,8 +129,8 @@ def build_critic(timesteps, use_mbd, use_packing, packing_degree, num_classes=10
 
 def build_generator_model(generator, critic, latent_dim, timesteps, use_packing, packing_degree, batch_size,
                           generator_lr):
-    generator.trainable = True
-    critic.trainable = False
+    utils.set_model_trainable(generator, True)
+    utils.set_model_trainable(critic, False)
 
     noise_samples = tf.keras.layers.Input((latent_dim,))
     labels = tf.keras.layers.Input((1, ))
@@ -175,8 +170,8 @@ def build_generator_model(generator, critic, latent_dim, timesteps, use_packing,
 
 def build_critic_model(generator, critic, latent_dim, timesteps, use_packing, packing_degree, batch_size, critic_lr,
                        gradient_penality_weight):
-    generator.trainable = False
-    critic.trainable = True
+    utils.set_model_trainable(generator, False)
+    utils.set_model_trainable(critic, True)
 
     noise_samples = tf.keras.layers.Input((latent_dim,))
     real_samples = tf.keras.layers.Input((timesteps,))
