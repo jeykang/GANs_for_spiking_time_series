@@ -34,7 +34,7 @@ class WGAN_GP:
         self._generated_datesets_dir = config['generated_datesets_dir']
         self._use_mbd = config['use_mbd']
         #self._use_packing = config['use_packing']
-        self._use_packing = True
+        self._use_packing = False
         
         #self._label_column = config['label_column']
         self._num_classes = 100000
@@ -72,10 +72,8 @@ class WGAN_GP:
                 indexes = np.random.randint(0, dataset.shape[0], self._batch_size)
                 batch_transactions = dataset[indexes].reshape(self._batch_size, self._timesteps)
                 
-                batch_labels = indexes.reshape(self._batch_size, 1) #really just user ids
-                
                 noise = np.random.normal(0, 1, (self._batch_size, self._latent_dim))
-                inputs = [batch_transactions, noise, batch_labels]
+                inputs = [batch_transactions, noise, indexes]
 
                 if self._use_packing:
                     supporting_indexes = np.random.randint(0, dataset.shape[0],
@@ -92,13 +90,13 @@ class WGAN_GP:
             generator_losses = []
             for _ in range(self._n_generator):
                 noise = np.random.normal(0, 1, (self._batch_size, self._latent_dim))
-                sampled_labels = np.random.randint(0, self._num_classes, self._batch_size)
+                sampled_labels = np.random.randint(0, dataset.shape[0], self._batch_size)
                 inputs = [noise, sampled_labels]
 
                 if self._use_packing:
                     supporting_noise = np.random.normal(0, 1,
                                                         (self._batch_size, self._latent_dim, self._packing_degree))
-                    supporting_labels = np.random.randint(0, self._num_classes, self._batch_size)
+                    supporting_labels = np.random.randint(0, dataset.shape[0], self._batch_size)
                     inputs.extend([supporting_noise, supporting_labels])
 
                 generator_losses.append(self._generator_model.train_on_batch(inputs, ones))
@@ -141,7 +139,7 @@ class WGAN_GP:
     def _save_samples(self):
         rows, columns = 6, 6
         noise = np.random.normal(0, 1, (rows * columns, self._latent_dim))
-        indexes = np.full((rows * columns, 1), 0)
+        indexes = np.random.choice(45, (rows * columns, 1), replace=False)
         generated_transactions = self._generator.predict([noise, indexes])
 
         filenames = [self._img_dir + ('/%07d.png' % self._epoch), self._img_dir + '/last.png']
@@ -151,7 +149,7 @@ class WGAN_GP:
         grid_size = 6
 
         latent_space_inputs = np.zeros((grid_size * grid_size, self._latent_dim))
-        indexes = np.full((grid_size * grid_size, 1), 0)
+        indexes = np.random.choice(45, (grid_size * grid_size, 1), replace=False)
 
         for i, v_i in enumerate(np.linspace(-1.5, 1.5, grid_size, True)):
             for j, v_j in enumerate(np.linspace(-1.5, 1.5, grid_size, True)):
