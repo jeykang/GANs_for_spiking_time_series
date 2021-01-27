@@ -51,18 +51,22 @@ def build_generator(latent_dim, timesteps, batch_size=64, num_classes=100000):
     gen_input = tf.keras.layers.Input((latent_dim,))
     label_input = tf.keras.layers.Input((1, ))
     print("labels shape:", label_input.shape)
-    label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, latent_dim)(label_input))
+    label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, 50)(label_input))
+    label_embed = tf.keras.layers.Dense(15)(label_embed)
     #mixed_input = gen_input * label_embed
-    mixed_input = tf.keras.layers.Concatenate(axis=1)([gen_input, label_embed])
-    print("mixed_input shape:", mixed_input.shape)
+    #mixed_input = tf.keras.layers.Concatenate(axis=1)([gen_input, label_embed])
+    #print("mixed_input shape:", mixed_input.shape)
     #mixed_input = mixed_input * tf.constant([[1.0, 2.0], [3.0, 4.0]])
     #mixed_input = tf.reshape(mixed_input, (-1, latent_dim))
     #print("mixed_input shape2:", mixed_input.shape)
     #mixed_input = gen_input
-    gdense0 = tf.keras.layers.Dense(15)(mixed_input)
+    gdense0 = tf.keras.layers.Dense(15)(gen_input)
     bnorm0 = tf.keras.layers.BatchNormalization()(gdense0)
     gactivation0 = tf.keras.layers.LeakyReLU(alpha=0.2)(bnorm0)
     
+    mixed_input = tf.keras.layers.Concatenate(axis=1)([gactivation0, label_embed])
+    print("mixed_input shape:", mixed_input.shape)
+
     #expand dims before entry into deconv block- something the original paper failed to mention
     gactivation0 = tf.expand_dims(gactivation0, axis=2)
     #print("gactivation shape (after expand):", gactivation0.shape)
@@ -96,7 +100,9 @@ def build_critic(timesteps, use_mbd, use_packing, packing_degree, num_classes=10
     
     #label_embed = tf.keras.layers.Dense(timesteps)(label_input)
     #label_embed = tf.expand_dims(label_embed, axis=-1)
-    label_embed = tf.reshape(tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, timesteps)(label_input)), (timesteps, packing_degree))
+    label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, 50)(label_input))
+    label_embed = tf.keras.layers.Dense(timesteps * packing_degree)(label_embed)
+    label_embed = tf.keras.layers.Reshape((timesteps, packing_degree))(label_embed)
     #label_embed = tf.keras.layers.Flatten()(tf.keras.layers.Embedding(num_classes, timesteps)(label_input))
 
     #flat_input = tf.keras.layers.Flatten()(critic_input)
